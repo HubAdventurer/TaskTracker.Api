@@ -46,11 +46,9 @@ public class TasksController : ControllerBase
     {
         var task = new TaskItem
         {
-            Id = _db.GetId(),
             Title = dto.Title,
             Description = dto.Description,
             IsCompleted = false
-
         };
 
         _db.Tasks.Add(task);

@@ -10,13 +10,4 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<TaskItem> Tasks => Set<TaskItem>();   
-
-    private int Id = 0;
-
-    public int GetId()
-    {
-        ++Id;
-        
-        return Id;
-    }
 }
