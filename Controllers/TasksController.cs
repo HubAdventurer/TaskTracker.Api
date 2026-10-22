@@ -3,6 +3,8 @@ using System.Security.Cryptography.X509Certificates;
 using Microsoft.AspNetCore.Mvc;
 using TaskTracker.Api.Models;
 using TaskTracker.Api.DTOs;
+using TaskTracker.Api.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace TaskTracker.Api.Controllers;
 
@@ -11,26 +13,25 @@ namespace TaskTracker.Api.Controllers;
 public class TasksController : ControllerBase
 {
 
-    private static readonly List<TaskItem> _tasks = new()
-    {
-        new TaskItem { Id = 1, Title = "Buy groceries", IsCompleted = false},
-        new TaskItem { Id = 2, Title = "Walk the dog", IsCompleted = true },
-        new TaskItem { Id = 3, Title = "Learn ASP.NET", IsCompleted = false, Description = "I will do it !" },
-        new TaskItem { Id = 4, Title = "Go for a walk", IsCompleted = true}
-    };
+    private readonly AppDbContext _db;
 
-    private static int _nextId = 5;
+    public TasksController(AppDbContext db)
+    {
+        _db = db;
+    }
 
     [HttpGet]
-    public IActionResult GetTask()
+    public async Task<IActionResult> GetTask()
     {
-        return Ok(_tasks.Select(MapToDTO));
+        var tasks = await _db.Tasks.ToListAsync();
+
+        return Ok(tasks.Select(MapToDTO).ToList());
     }
 
     [HttpGet("{id}")]
-    public IActionResult GetTask(int id)
+    public async Task<IActionResult> GetTask(int id)
     {
-        var task = _tasks.FirstOrDefault(t => t.Id == id);
+        var task = await _db.Tasks.FindAsync(id);
 
         if(task == null)
         {
@@ -41,26 +42,27 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost]
-    public IActionResult CreateTask(CreateTaskDTO dto)
+    public async Task<IActionResult> CreateTask(CreateTaskDTO dto)
     {
         var task = new TaskItem
         {
-            Id = _nextId++,
+            Id = _db.GetId(),
             Title = dto.Title,
             Description = dto.Description,
             IsCompleted = false
 
         };
 
-        _tasks.Add(task);
+        _db.Tasks.Add(task);
+        await _db.SaveChangesAsync();
 
         return CreatedAtAction(nameof(GetTask), new { id = task.Id}, MapToDTO(task));
     }
 
     [HttpPut("{id}")]
-    public IActionResult UpdateTask(int id, UpdateTaskDTO dto)
+    public async Task<IActionResult> UpdateTask(int id, UpdateTaskDTO dto)
     {
-        var task = _tasks.FirstOrDefault(t => t.Id == id);
+        var task = await _db.Tasks.FindAsync(id);
 
         if (task == null)
         {
@@ -71,28 +73,30 @@ public class TasksController : ControllerBase
         task.Description = dto.Description;
         task.IsCompleted = dto.IsCompleted;
         
+        await _db.SaveChangesAsync();
         return NoContent();
     }
 
     [HttpDelete("{id}")]
-    public IActionResult DeleteTask(int id)
+    public async Task<IActionResult> DeleteTask(int id)
     {
-        var task = _tasks.FirstOrDefault(t => t.Id == id);
+        var task = await _db.Tasks.FindAsync(id);
 
         if (task == null)
         {
             return NotFound();
         }
 
-        _tasks.Remove(task);
+        _db.Tasks.Remove(task);
+        await _db.SaveChangesAsync();
 
         return NoContent();
     }
 
     [HttpPatch("{id}")]
-    public IActionResult PatchTask(int id, PatchTaskDTO dto)
+    public async Task<IActionResult> PatchTask(int id, PatchTaskDTO dto)
     {
-        var task = _tasks.FirstOrDefault(t => t.Id == id);
+        var task = await _db.Tasks.FindAsync(id);
 
         if(task == null) 
         {
@@ -103,7 +107,9 @@ public class TasksController : ControllerBase
         if (dto.Description != null) task.Description = dto.Description;
         if (dto.IsCompleted != null) task.IsCompleted = dto.IsCompleted.Value;
 
-        return Ok();
+        await _db.SaveChangesAsync();
+
+        return Ok(MapToDTO(task));
     }
 
     private static TaskDTO MapToDTO(TaskItem task)
