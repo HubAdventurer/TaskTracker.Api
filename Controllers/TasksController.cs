@@ -21,7 +21,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> GetTask()
+    public async Task<ActionResult<List<TaskDTO>>> GetTask()
     {
         var tasks = await _db.Tasks.ToListAsync();
 
@@ -29,7 +29,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("{id}")]
-    public async Task<IActionResult> GetTask(int id)
+    public async Task<ActionResult<TaskDTO>> GetTask(int id)
     {
         var task = await _db.Tasks.FindAsync(id);
 
@@ -42,7 +42,7 @@ public class TasksController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateTask(CreateTaskDTO dto)
+    public async Task<ActionResult<TaskDTO>> CreateTask(CreateTaskDTO dto)
     {
         var task = new TaskItem
         {
@@ -117,7 +117,7 @@ public class TasksController : ControllerBase
           Id = task.Id,
           Title = task.Title,
           Description = task.Description,
-          IsCompleted = task.IsCompleted  
+          IsCompleted = task.IsCompleted,
         };
     }
 }
