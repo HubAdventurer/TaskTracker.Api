@@ -48,7 +48,8 @@ public class TasksController : ControllerBase
         {
             Title = dto.Title,
             Description = dto.Description,
-            IsCompleted = false
+            IsCompleted = false,
+            CreatedAt = DateTime.UtcNow
         };
 
         _db.Tasks.Add(task);
@@ -118,6 +119,7 @@ public class TasksController : ControllerBase
           Title = task.Title,
           Description = task.Description,
           IsCompleted = task.IsCompleted,
+          CreatedAt = task.CreatedAt
         };
     }
 }
