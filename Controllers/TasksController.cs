@@ -21,9 +21,28 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<List<TaskDTO>>> GetTask()
+    public async Task<ActionResult<List<TaskDTO>>> GetTasks(bool? isCompleted, string? sortBy, string? search, bool descending = false)
     {
-        var tasks = await _db.Tasks.ToListAsync();
+        var query = _db.Tasks.AsQueryable().AsNoTracking();
+
+        if(isCompleted != null)
+            query = query.Where(t => t.IsCompleted == isCompleted.Value);
+
+        if (sortBy == "title")
+            query = descending ? query.OrderByDescending(t => t.Title) : query.OrderBy(t => t.Title);
+        else if (sortBy == "createdAt")
+            query = descending ? query.OrderByDescending(t => t.CreatedAt) : query.OrderBy(t => t.CreatedAt);
+        else
+        {
+            query = query.OrderBy(t => t.Id);
+        }
+
+        if(!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(t => t.Title.Contains(search));
+        }   
+        
+        var tasks = await query.ToListAsync();
 
         return Ok(tasks.Select(MapToDTO).ToList());
     }
@@ -34,9 +53,7 @@ public class TasksController : ControllerBase
         var task = await _db.Tasks.FindAsync(id);
 
         if(task == null)
-        {
             return NotFound();
-        }
 
         return Ok(MapToDTO(task));
     }
@@ -64,9 +81,7 @@ public class TasksController : ControllerBase
         var task = await _db.Tasks.FindAsync(id);
 
         if (task == null)
-        {
             return NotFound();
-        }
 
         task.Title = dto.Title;
         task.Description = dto.Description;
@@ -82,9 +97,7 @@ public class TasksController : ControllerBase
         var task = await _db.Tasks.FindAsync(id);
 
         if (task == null)
-        {
             return NotFound();
-        }
 
         _db.Tasks.Remove(task);
         await _db.SaveChangesAsync();
@@ -98,9 +111,7 @@ public class TasksController : ControllerBase
         var task = await _db.Tasks.FindAsync(id);
 
         if(task == null) 
-        {
             return NotFound();
-        }
 
         if (dto.Title != null) task.Title = dto.Title;
         if (dto.Description != null) task.Description = dto.Description;
