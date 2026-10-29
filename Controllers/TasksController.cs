@@ -14,27 +14,39 @@ public class TasksController : ControllerBase
 {
 
     private readonly AppDbContext _db;
+    private readonly ILogger<TasksController> _logger;
 
-    public TasksController(AppDbContext db)
+    public TasksController(AppDbContext db, ILogger<TasksController> logger)
     {
         _db = db;
+        _logger = logger;
     }
 
     [HttpGet]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<List<TaskDTO>>> GetTasks(bool? isCompleted, string? sortBy, string? search, bool descending = false)
     {
-        var query = _db.Tasks.AsQueryable().AsNoTracking();
+        IQueryable<TaskItem> query = _db.Tasks.AsQueryable().AsNoTracking();
 
         if(isCompleted != null)
             query = query.Where(t => t.IsCompleted == isCompleted.Value);
 
-        if (sortBy == "title")
-            query = descending ? query.OrderByDescending(t => t.Title) : query.OrderBy(t => t.Title);
-        else if (sortBy == "createdAt")
-            query = descending ? query.OrderByDescending(t => t.CreatedAt) : query.OrderBy(t => t.CreatedAt);
-        else
+        if (String.IsNullOrEmpty(sortBy))
         {
             query = query.OrderBy(t => t.Id);
+        }
+        else if (sortBy == "title")
+        {
+            query = descending ? query.OrderByDescending(t => t.Title) : query.OrderBy(t => t.Title);
+        }
+        else if (sortBy == "createdAt")
+        {
+            query = descending ? query.OrderByDescending(t => t.CreatedAt) : query.OrderBy(t => t.CreatedAt);
+        }
+        else
+        {
+            return BadRequest("Invalid sortBy value");
         }
 
         if(!string.IsNullOrWhiteSpace(search))
@@ -48,17 +60,25 @@ public class TasksController : ControllerBase
     }
 
     [HttpGet("{id}")]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<ActionResult<TaskDTO>> GetTask(int id)
     {
         var task = await _db.Tasks.FindAsync(id);
 
         if(task == null)
+        {
+            _logger.LogDebug("No task with ID {TaskId}", id);
+
             return NotFound();
+        }
 
         return Ok(MapToDTO(task));
     }
 
     [HttpPost]
+    [ProducesResponseType(StatusCodes.Status201Created)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<ActionResult<TaskDTO>> CreateTask(CreateTaskDTO dto)
     {
         var task = new TaskItem
@@ -72,10 +92,15 @@ public class TasksController : ControllerBase
         _db.Tasks.Add(task);
         await _db.SaveChangesAsync();
 
+        _logger.LogInformation("Created task {TaskId}", task.Id);
+
         return CreatedAtAction(nameof(GetTask), new { id = task.Id}, MapToDTO(task));
     }
 
     [HttpPut("{id}")]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> UpdateTask(int id, UpdateTaskDTO dto)
     {
         var task = await _db.Tasks.FindAsync(id);
@@ -92,6 +117,8 @@ public class TasksController : ControllerBase
     }
 
     [HttpDelete("{id}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteTask(int id)
     {
         var task = await _db.Tasks.FindAsync(id);
@@ -106,7 +133,9 @@ public class TasksController : ControllerBase
     }
 
     [HttpPatch("{id}")]
-    public async Task<IActionResult> PatchTask(int id, PatchTaskDTO dto)
+    [ProducesResponseType(StatusCodes.Status404NotFound)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    public async Task<ActionResult<TaskDTO>> PatchTask(int id, PatchTaskDTO dto)
     {
         var task = await _db.Tasks.FindAsync(id);
 
