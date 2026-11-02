@@ -142,6 +142,7 @@ public class TasksController : ControllerBase
         if(task == null) 
             return NotFound();
 
+    // Null means "leave unchanged"; this also treats explicit JSON null as omitted.
         if (dto.Title != null) task.Title = dto.Title;
         if (dto.Description != null) task.Description = dto.Description;
         if (dto.IsCompleted != null) task.IsCompleted = dto.IsCompleted.Value;
