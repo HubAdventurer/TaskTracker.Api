@@ -11,7 +11,7 @@ public class TasksApiTests : IDisposable
     private const string Description = "Keep this description";
 
     private readonly RestClient _client = new(
-        Environment.GetEnvironmentVariable("TASKTRACKER_TEST_BASE_URL")
+        Environment.GetEnvironmentVariable("TASKTRACKER_TEST_BASE_URL") 
         ?? "http://localhost:5118");
 
     [Fact]
