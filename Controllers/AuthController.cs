@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpLogging;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using TaskTracker.Api.DTOs;
@@ -32,4 +33,25 @@ public class AuthController : ControllerBase
 
         return Ok("Account Created");
     }
+
+    [HttpPost("login")]
+    public async Task<IActionResult> LoginAccount(LoginDTO dto)
+    {
+        var account = await _userManager.FindByNameAsync(dto.UserEmail);
+
+        if(account == null)
+        {
+            return Unauthorized("Invalid email or password");
+        }
+
+        bool passwordMatch = await _userManager.CheckPasswordAsync(account, dto.Password);
+
+        if (!passwordMatch)
+        {
+            return Unauthorized("Invalid email or password");
+        }
+
+        return Ok("Credential verified");
+
+    } 
 }
